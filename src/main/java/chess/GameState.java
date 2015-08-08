@@ -1,9 +1,15 @@
 package chess;
 
 
+import chess.actions.CheckHelper;
+import chess.actions.Move;
+import chess.actions.MoveHelper;
+import chess.actions.MoveHelperFactory;
 import chess.pieces.*;
 
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,6 +33,13 @@ public class GameState {
      */
     public GameState() {
         positionToPieceMap = new HashMap<Position, Piece>();
+    }
+
+    public GameState(Map<Position, Piece> piecesToPlace) {
+        positionToPieceMap = new HashMap<Position, Piece>();
+        for (Map.Entry<Position, Piece> entry : piecesToPlace.entrySet()) {
+            placePiece(entry.getValue(), entry.getKey());
+        }
     }
 
     public Player getCurrentPlayer() {
@@ -76,6 +89,7 @@ public class GameState {
 
     /**
      * Get the piece at the position specified by the String
+     *
      * @param colrow The string indication of position; i.e. "d5"
      * @return The piece at that position, or null if it does not exist.
      */
@@ -86,6 +100,7 @@ public class GameState {
 
     /**
      * Get the piece at a given position on the board
+     *
      * @param position The position to inquire about.
      * @return The piece at that position, or null if it does not exist.
      */
@@ -95,10 +110,68 @@ public class GameState {
 
     /**
      * Method to place a piece at a given position
-     * @param piece The piece to place
+     *
+     * @param piece    The piece to place
      * @param position The position
      */
     private void placePiece(Piece piece, Position position) {
         positionToPieceMap.put(position, piece);
+    }
+
+    public List<Move> listAllMoves() {
+        return listAllMoves(currentPlayer, true);
+    }
+
+    public List<Move> listAllMoves(Player p, boolean isCheck) {
+        List<Move> moves = new LinkedList<Move>();
+        for (Map.Entry<Position, Piece> entry : positionToPieceMap.entrySet()) {
+            if (entry.getValue().getOwner() == p)
+                moves.addAll(listAllMoves(entry.getValue(), entry.getKey(), isCheck));
+        }
+        return moves;
+    }
+
+    private List<Move> listAllMoves(Piece p, Position pos, boolean isCheck) {
+        MoveHelperFactory factory = new MoveHelperFactory(this);
+        MoveHelper helper = factory.getMoveHelper(p);
+        return helper.getAllMoves(p, pos, isCheck);
+    }
+
+    public boolean doMove(Move move) {
+        return doMove(move, true);
+    }
+
+    public boolean doMove(Move move, boolean isCheck) {
+        Piece p = getPieceAt(move.getOrigin());
+        if (p == null)
+            return false;
+        MoveHelperFactory factory = new MoveHelperFactory(this);
+        if (factory.getMoveHelper(p).getAllMoves(p, move.getOrigin(), isCheck).contains(move)) {
+            move(move, p);
+            changePlayer();
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void move(Move move, Piece p) {
+        positionToPieceMap.remove(move.getOrigin());
+        positionToPieceMap.put(move.getDestination(), p);
+    }
+
+    public boolean isCheck(Player p) {
+        CheckHelper helper = new CheckHelper(this);
+        return helper.isCheck(p);
+    }
+
+    public Map<Position, Piece> getGameBoardImmutable() {
+        Map<Position, Piece> newMap = new HashMap<Position, Piece>();
+        newMap.putAll(positionToPieceMap);
+        return newMap;
+    }
+
+    public void changePlayer() {
+        currentPlayer = currentPlayer == Player.Black ? Player.White : Player.Black;
     }
 }

@@ -1,8 +1,10 @@
 package chess;
 
+import chess.actions.Move;
 import chess.pieces.Piece;
 
 import java.io.*;
+import java.util.List;
 
 /**
  * This class provides the basic CLI interface to the Chess game.
@@ -23,6 +25,7 @@ public class CLI {
 
     /**
      * Write the string to the output
+     *
      * @param str The string to write
      */
     private void writeOutput(String str) {
@@ -31,6 +34,7 @@ public class CLI {
 
     /**
      * Retrieve a string from the console, returning after the user hits the 'Return' key.
+     *
      * @return The input from the user, or an empty-length string if they did not type anything.
      */
     private String getInput() {
@@ -48,6 +52,13 @@ public class CLI {
 
         while (true) {
             showBoard();
+            if (gameState.listAllMoves().isEmpty()) {
+                if (gameState.isCheck(gameState.getCurrentPlayer()))
+                    writeOutput("The game is over.  Congrats to " + (gameState.getCurrentPlayer() == Player.Black ? "White" : "Black") + ".");
+                else
+                    writeOutput("The game is over. Stalemate");
+                System.exit(0);
+            }
             writeOutput(gameState.getCurrentPlayer() + "'s Move");
 
             String input = getInput();
@@ -64,13 +75,26 @@ public class CLI {
                 } else if (input.equals("board")) {
                     writeOutput("Current Game:");
                 } else if (input.equals("list")) {
-                    writeOutput("====> List Is Not Implemented (yet) <====");
+                    showMoves(gameState.listAllMoves());
                 } else if (input.startsWith("move")) {
-                    writeOutput("====> Move Is Not Implemented (yet) <====");
+                    String[] command = input.split(" ");
+                    boolean moved = gameState.doMove(new Move(new Position(command[1]), new Position(command[2])));
+                    if (!moved) {
+                        writeOutput("Illegal move.");
+                    } else {
+                        if (gameState.isCheck(gameState.getCurrentPlayer()))
+                            writeOutput("Check");
+                    }
                 } else {
                     writeOutput("I didn't understand that.  Type 'help' for a list of commands.");
                 }
             }
+        }
+    }
+
+    private void showMoves(List<Move> moves) {
+        for (Move m : moves) {
+            writeOutput(m.toString());
         }
     }
 
